@@ -116,8 +116,8 @@ function parsearCSV(textoCsv) {
     const encabezados = dividirLineaCSV(lineas[0]).map(h => normalizarClave(h));
     const resultado = [];
 
-    // Fila 2 (índice 1) se omite porque es el buscador interno de Google Sheets.
-    // Los datos comienzan en la Fila 3 (índice 2).
+    // Fila 2 (índice 1) se omite (buscador interno de Google Sheets).
+    // Los datos reales empiezan en la Fila 3 (índice 2).
     for (let i = 2; i < lineas.length; i++) {
         if (!lineas[i].trim()) continue;
 
@@ -162,92 +162,108 @@ function dividirLineaCSV(linea) {
 function obtenerValorColumna(fila, claveConfig) {
     const nombreEncabezado = CONFIG_VARS.COLUMNAS?.[claveConfig] || claveConfig;
     const claveNormalizada = normalizarClave(nombreEncabezado);
-    return fila[claveNormalizada] || "";
+    const valor = fila[claveNormalizada] || "";
+    return valor.trim() === "---" ? "" : valor.trim();
+}
+
+function formatearDuracion(duracionRaw) {
+    if (!duracionRaw) return "";
+    // Si viene como "01:49:00" desde Google Sheets, lo convierte a "1:49"
+    const matchHms = duracionRaw.match(/^0?(\d+):(\d{2}):\d{2}$/);
+    if (matchHms) {
+        return `${matchHms[1]}:${matchHms[2]}`;
+    }
+    return duracionRaw;
+}
+
+function formatearAno(anoRaw) {
+    if (!anoRaw) return "";
+    // Evita decimales si viene como "2026.0"
+    return anoRaw.replace(/\.0+$/, "");
 }
 
 // ==========================================
-// 3. ALGORITMO DE ORDENAMIENTO CIRCULAR (1 A 560)
+// 3. ALGORITMO CIRCULAR POR COLUMNA "CONDICIÓN"
 // ==========================================
-function parsearFechaTimestamp(strFecha) {
-    if (!strFecha || strFecha.trim() === "" || strFecha.trim() === "---") return 0;
-    const limpia = strFecha.trim();
-
-    // Soporta DD/MM/YYYY o DD/MM/YYYY HH:mm:ss
-    const matchLatam = limpia.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
-    if (matchLatam) {
-        const [, dia, mes, anio, hora = 0, min = 0, seg = 0] = matchLatam;
-        const ts = new Date(Number(anio), Number(mes) - 1, Number(dia), Number(hora), Number(min), Number(seg)).getTime();
-        return isNaN(ts) ? 0 : ts;
-    }
-
-    // Soporta YYYY/MM/DD o YYYY-MM-DD
-    const matchIso = limpia.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
-    if (matchIso) {
-        const [, anio, mes, dia, hora = 0, min = 0, seg = 0] = matchIso;
-        const ts = new Date(Number(anio), Number(mes) - 1, Number(dia), Number(hora), Number(min), Number(seg)).getTime();
-        return isNaN(ts) ? 0 : ts;
-    }
-
-    const fallback = Date.parse(limpia);
-    return isNaN(fallback) ? 0 : fallback;
-}
-
 function construirCatalogoCircular(filasCrudas) {
     const maxCatalogo = Number(CONFIG_VARS.LIMITE_MAXIMO_CATALOGO) || 560;
-    const cantidadTrabajar = Math.min(Number(CONFIG_VARS.CANTIDAD_ITEMS_ACTIVOS) || 100, maxCatalogo);
+    const txtUmbral = normalizarClave(CONFIG_VARS.CONDICION_UMBRAL || "UMBRAL");
+    const txtHabilitado = normalizarClave(CONFIG_VARS.CONDICION_HABILITADO || "HABILITADO");
 
-    // Indexar filas por número entero de código (1..560)
     const mapaPorNumero = new Map();
-    let ultimoNumeroActualizado = null;
-    let maxTimestamp = -1;
+    let numeroUmbral = null;
+    let mayorNumeroHabilitado = null;
 
-    filasCrudas.forEach((fila, idx) => {
+    filasCrudas.forEach((fila) => {
         const codigoStr = obtenerValorColumna(fila, "CODIGO");
-        const titulo = obtenerValorColumna(fila, "TITULO");
         const numCodigo = parseInt(codigoStr, 10);
 
         if (!isNaN(numCodigo) && numCodigo >= 1 && numCodigo <= maxCatalogo) {
+            const condicionRaw = obtenerValorColumna(fila, "CONDICION");
+            const condicionNorm = normalizarClave(condicionRaw);
+
+            const esUmbral = condicionNorm === txtUmbral && txtUmbral !== "";
+            const esHabilitado = esUmbral || (condicionNorm === txtHabilitado && txtHabilitado !== "");
+
+            // Recopilar pistas de audio (AUDIO 1, AUDIO 2, AUDIO 3)
+            const audios = [
+                obtenerValorColumna(fila, "AUDIO_1"),
+                obtenerValorColumna(fila, "AUDIO_2"),
+                obtenerValorColumna(fila, "AUDIO_3")
+            ].filter(Boolean);
+
+            // Recopilar subtítulos (SUB 1 a SUB 5)
+            const subtitulos = [
+                obtenerValorColumna(fila, "SUB_1"),
+                obtenerValorColumna(fila, "SUB_2"),
+                obtenerValorColumna(fila, "SUB_3"),
+                obtenerValorColumna(fila, "SUB_4"),
+                obtenerValorColumna(fila, "SUB_5")
+            ].filter(Boolean);
+
             const item = {
                 numero: numCodigo,
-                codigoFormateado: codigoStr.padStart(3, "0"),
-                titulo: titulo,
-                ano: obtenerValorColumna(fila, "ANO"),
+                codigoFormateado: String(numCodigo).padStart(3, "0"),
+                titulo: obtenerValorColumna(fila, "TITULO"),
+                ano: formatearAno(obtenerValorColumna(fila, "ANO")),
                 pais: obtenerValorColumna(fila, "PAIS"),
-                duracion: obtenerValorColumna(fila, "DURACION"),
-                peso: obtenerValorColumna(fila, "PESO"),
-                audio: obtenerValorColumna(fila, "AUDIO"),
+                duracion: formatearDuracion(obtenerValorColumna(fila, "DURACION")),
+                audios: audios,
                 formato: obtenerValorColumna(fila, "FORMATO"),
-                subtitulos: obtenerValorColumna(fila, "SUBTITULOS"),
-                fechaActualizacion: obtenerValorColumna(fila, "FECHA_ACTUALIZACION"),
-                esValido: titulo.trim() !== "" && titulo.trim() !== "---"
+                resolucion: obtenerValorColumna(fila, "RESOLUCION"),
+                fuente: obtenerValorColumna(fila, "FUENTE"),
+                tamano: obtenerValorColumna(fila, "TAMANO"),
+                tamanoConv: obtenerValorColumna(fila, "TAMANO_CONV"),
+                subtitulos: subtitulos,
+                esHabilitado: esHabilitado,
+                esUmbral: esUmbral
             };
 
             mapaPorNumero.set(numCodigo, item);
 
-            if (item.esValido) {
-                const ts = parsearFechaTimestamp(item.fechaActualizacion);
-                // Si hay fechas válidas, gana la más reciente; si empatan o no hay fechas, gana el código mayor en el ciclo
-                if (ts > maxTimestamp) {
-                    maxTimestamp = ts;
-                    ultimoNumeroActualizado = numCodigo;
-                } else if (maxTimestamp === 0 && (ultimoNumeroActualizado === null || numCodigo > ultimoNumeroActualizado)) {
-                    ultimoNumeroActualizado = numCodigo;
+            if (esUmbral) {
+                numeroUmbral = numCodigo;
+            }
+            if (esHabilitado) {
+                if (mayorNumeroHabilitado === null || numCodigo > mayorNumeroHabilitado) {
+                    mayorNumeroHabilitado = numCodigo;
                 }
             }
         }
     });
 
-    if (ultimoNumeroActualizado === null) return [];
+    // Punto de inicio: la fila con "UMBRAL" (o en su defecto el mayor habilitado si aún no marcaron umbral)
+    const pivoteInicio = numeroUmbral !== null ? numeroUmbral : mayorNumeroHabilitado;
+    if (pivoteInicio === null) return [];
 
-    // Recorrido circular hacia atrás desde ultimoNumeroActualizado por cantidadTrabajar posiciones
+    // Recorrido circular completo hacia atrás desde pivoteInicio (ej. 194 -> 193 -> ... -> 26 -> 560 -> 559...)
+    // Solo incluye los ítems cuya CONDICIÓN sea "HABILITADO" o "UMBRAL".
     const listaOrdenada = [];
-    for (let step = 0; step < cantidadTrabajar; step++) {
-        // Fórmula circular 1-indexed: retrocede step pasos envolviendo de 1 hacia maxCatalogo
-        const numActual = ((ultimoNumeroActualizado - 1 - step) % maxCatalogo + maxCatalogo) % maxCatalogo + 1;
+    for (let step = 0; step < maxCatalogo; step++) {
+        const numActual = ((pivoteInicio - 1 - step) % maxCatalogo + maxCatalogo) % maxCatalogo + 1;
         const registro = mapaPorNumero.get(numActual);
 
-        // Solo agregamos si la fila tiene película cargada (ignoramos las vacías, ej. 1 al 80)
-        if (registro && registro.esValido) {
+        if (registro && registro.esHabilitado) {
             listaOrdenada.push(registro);
         }
     }
@@ -478,7 +494,165 @@ function actualizarUIBotonesModo() {
 }
 
 // ==========================================
-// 6. FILTRADO Y RENDERIZADO DE VISTAS
+// 6. GENERACIÓN DE PORTADA Y BLOQUE DE FICHA TÉCNICA
+// ==========================================
+function generarHtmlImagenPortada(peli, clasesExtra = "w-full h-full object-cover transition-transform duration-300") {
+    // Si tiene portada en carpeta portadas/ (.jpg, .webp, .png, .jpeg), no muestra el código.
+    // Solo si no existe ninguna imagen, muestra la portada genérica con el código del ítem.
+    return `
+        <img src="portadas/${peli.codigoFormateado}.jpg" 
+             alt="${peli.titulo.replace(/"/g, "&quot;")}"
+             loading="lazy"
+             onerror="this.onerror=()=>{ this.onerror=()=>{ this.onerror=()=>{ this.src='https://placehold.co/400x600/0f172a/34d399?text=${peli.codigoFormateado}'; }; this.src='portadas/${peli.codigoFormateado}.jpeg'; }; this.src='portadas/${peli.codigoFormateado}.png'; }; this.src='portadas/${peli.codigoFormateado}.webp';"
+             class="${clasesExtra}">
+    `;
+}
+
+function construirContenidoVersion(peli, tipoVersion) {
+    const etq = CONFIG_VARS.ETIQUETAS || {};
+    const cfgLigera = CONFIG_VARS.VERSION_LIGERA || {};
+
+    const esLigera = tipoVersion === "ligera";
+
+    // Audios según versión
+    const listaAudios = esLigera
+        ? [cfgLigera.AUDIO || "Español Latino AAC 2.0"]
+        : (peli.audios.length > 0 ? peli.audios : ["No especificado"]);
+
+    // Video: Formato + Resolución + Fuente
+    const formatoBase = esLigera
+        ? (cfgLigera.FORMATO_VIDEO || "MP4")
+        : peli.formato;
+
+    const resolucionBase = (esLigera && cfgLigera.RESOLUCION_VIDEO && cfgLigera.RESOLUCION_VIDEO.trim() !== "")
+        ? cfgLigera.RESOLUCION_VIDEO.trim()
+        : peli.resolucion;
+
+    const textoFormatoCompleto = [formatoBase, resolucionBase, peli.fuente].filter(Boolean).join(" ");
+
+    // Tamaño según versión
+    const textoTamano = esLigera
+        ? (peli.tamanoConv || "No especificado")
+        : (peli.tamano || "No especificado");
+
+    // Subtítulos (solo en Versión Pesada)
+    const tieneSubtitulos = !esLigera && peli.subtitulos.length > 0;
+    const textoSubtitulos = peli.subtitulos.join(", ");
+
+    return `
+        <!-- DATOS GENERALES -->
+        <div class="flex flex-col gap-1 text-xs">
+            ${peli.ano ? `
+            <div class="flex items-baseline gap-1.5">
+                <span class="font-bold dinamico-texto-acento">${etq.ANO_ESTRENO || "Año de Estreno:"}</span>
+                <span class="text-slate-100 font-semibold">${peli.ano}</span>
+            </div>` : ""}
+            
+            ${peli.pais ? `
+            <div class="flex items-baseline gap-1.5">
+                <span class="font-bold dinamico-texto-acento">${etq.PAIS || "País:"}</span>
+                <span class="text-slate-100 font-semibold">${peli.pais}</span>
+            </div>` : ""}
+            
+            ${peli.duracion ? `
+            <div class="flex items-baseline gap-1.5">
+                <span class="font-bold dinamico-texto-acento">${etq.DURACION || "Duración:"}</span>
+                <span class="text-slate-100 font-semibold">${peli.duracion}</span>
+            </div>` : ""}
+        </div>
+
+        <div class="h-px bg-slate-800/80"></div>
+
+        <!-- SECCIÓN AUDIO -->
+        <div class="flex flex-col gap-1.5 text-xs">
+            <span class="font-black dinamico-texto-acento uppercase text-[11px] tracking-wider">${etq.SECCION_AUDIO || "AUDIO"}</span>
+            <div class="flex flex-col gap-1">
+                ${listaAudios.map(audioItem => `
+                    <div class="bg-slate-900/90 border border-slate-800 text-slate-200 px-2.5 py-1 rounded-lg font-medium text-[11px]">
+                        ${audioItem}
+                    </div>
+                `).join("")}
+            </div>
+        </div>
+
+        <div class="h-px bg-slate-800/80"></div>
+
+        <!-- SECCIÓN VIDEO -->
+        <div class="flex flex-col gap-1 text-xs">
+            <span class="font-black dinamico-texto-acento uppercase text-[11px] tracking-wider">${etq.SECCION_VIDEO || "VIDEO"}</span>
+            <div class="flex flex-col gap-1 text-[11px] mt-0.5">
+                ${textoFormatoCompleto ? `
+                <div class="flex items-baseline gap-1.5">
+                    <span class="font-bold text-slate-400">${etq.FORMATO || "Formato:"}</span>
+                    <span class="text-slate-100 font-semibold">${textoFormatoCompleto}</span>
+                </div>` : ""}
+                <div class="flex items-baseline gap-1.5">
+                    <span class="font-bold text-slate-400">${etq.TAMANO || "Tamaño:"}</span>
+                    <span class="text-slate-100 font-semibold">${textoTamano}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECCIÓN SUBTÍTULOS (SOLO EN VERSIÓN PESADA) -->
+        ${tieneSubtitulos ? `
+        <div class="h-px bg-slate-800/80"></div>
+        <div class="flex flex-col gap-1 text-xs">
+            <span class="font-black dinamico-texto-acento uppercase text-[11px] tracking-wider">${etq.SECCION_SUBTITULOS || "SUBTÍTULOS"}</span>
+            <p class="text-slate-300 font-medium text-[11px] leading-relaxed">${textoSubtitulos}</p>
+        </div>
+        ` : ""}
+    `;
+}
+
+function crearBloqueFichaInteractiva(peli) {
+    const txtBtnPesada = CONFIG_VARS.TEXTO_BTN_VERSION_1 || "Versión Pesada";
+    const txtBtnLigera = CONFIG_VARS.TEXTO_BTN_VERSION_2 || "Versión Ligera";
+
+    const contenedorFicha = document.createElement("div");
+    contenedorFicha.className = "bg-slate-950/85 rounded-xl p-3 border border-slate-800/80 flex flex-col gap-3";
+
+    contenedorFicha.innerHTML = `
+        <!-- PAR DE BOTONES: VERSIÓN PESADA (IZQUIERDA) / VERSIÓN LIGERA (DERECHA) -->
+        <div class="grid grid-cols-2 gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800">
+            <button type="button" data-version="pesada" class="btn-version py-1.5 px-2 rounded-lg text-[11px] font-black transition-all active:scale-95 dinamico-modo-activo text-center">
+                ${txtBtnPesada}
+            </button>
+            <button type="button" data-version="ligera" class="btn-version py-1.5 px-2 rounded-lg text-[11px] font-bold text-slate-400 hover:text-white transition-all active:scale-95 text-center">
+                ${txtBtnLigera}
+            </button>
+        </div>
+
+        <!-- CONTENIDO DINÁMICO DE DATOS (SE ADAPTA VERTICALMENTE) -->
+        <div class="contenedor-datos-version flex flex-col gap-2.5">
+            ${construirContenidoVersion(peli, "pesada")}
+        </div>
+    `;
+
+    const botonesVersion = contenedorFicha.querySelectorAll(".btn-version");
+    const contenedorDatos = contenedorFicha.querySelector(".contenedor-datos-version");
+
+    botonesVersion.forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const versionElegida = btn.getAttribute("data-version");
+
+            botonesVersion.forEach(b => {
+                if (b.getAttribute("data-version") === versionElegida) {
+                    b.className = "btn-version py-1.5 px-2 rounded-lg text-[11px] font-black transition-all active:scale-95 dinamico-modo-activo text-center";
+                } else {
+                    b.className = "btn-version py-1.5 px-2 rounded-lg text-[11px] font-bold text-slate-400 hover:text-white transition-all active:scale-95 text-center";
+                }
+            });
+
+            contenedorDatos.innerHTML = construirContenidoVersion(peli, versionElegida);
+        });
+    });
+
+    return contenedorFicha;
+}
+
+// ==========================================
+// 7. RENDERIZADO DE VISTAS (MODO 1 Y MODO 2)
 // ==========================================
 function aplicarFiltrosYRenderizar() {
     const textoBusqueda = quitarAcentos(inputBuscar.value.toLowerCase().trim());
@@ -501,28 +675,7 @@ function aplicarFiltrosYRenderizar() {
     renderizarPaginacion(datosFiltrados.length);
 }
 
-function generarHtmlImagenPortada(codigoFormateado, tituloAlt, clasesExtra = "w-full h-full object-cover transition-transform duration-300") {
-    return `
-        <img src="portadas/${codigoFormateado}.jpg" 
-             alt="${tituloAlt.replace(/"/g, "&quot;")}"
-             loading="lazy"
-             onerror="this.onerror=()=>{ this.onerror=()=>{ this.onerror=()=>{ this.src='https://placehold.co/400x600/0f172a/34d399?text=%23${codigoFormateado}'; }; this.src='portadas/${codigoFormateado}.jpeg'; }; this.src='portadas/${codigoFormateado}.png'; }; this.src='portadas/${codigoFormateado}.webp';"
-             class="${clasesExtra}">
-    `;
-}
-
-function generarHtmlPildorasAudio(audioTexto) {
-    if (!audioTexto || audioTexto.trim() === "" || audioTexto.trim() === "---") {
-        return `<span class="text-slate-400 font-medium">No especificado</span>`;
-    }
-    // Separa por coma o salto de línea para crear insignias limpias
-    const pistas = audioTexto.split(/,|\n|\//).map(p => p.trim()).filter(Boolean);
-    return pistas.map(pista => `
-        <span class="bg-slate-900 border border-slate-700/70 text-slate-200 px-2 py-0.5 rounded font-medium">${pista}</span>
-    `).join("");
-}
-
-// MODO 1: VISTA NORMAL (20 ítems por página, portada + ficha técnica abajo)
+// MODO 1: VISTA NORMAL (20 ítems por página, sin datos arriba de la portada, ficha adaptable abajo)
 function renderizarVistaNormal() {
     contenedorPrincipal.innerHTML = "";
 
@@ -539,68 +692,24 @@ function renderizarVistaNormal() {
     const inicio = (paginaActual - 1) * limite;
     const itemsPagina = datosFiltrados.slice(inicio, inicio + limite);
 
+    // items-start permite que cada tarjeta ajuste su altura vertical según la cantidad de audios y subtítulos
     const grid = document.createElement("div");
-    grid.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4";
+    grid.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start";
 
     itemsPagina.forEach(peli => {
         const tarjeta = document.createElement("article");
         tarjeta.className = "dinamico-tarjeta border rounded-2xl overflow-hidden shadow-xl p-3 flex flex-col gap-3";
 
-        const metaSuperior = [peli.duracion, peli.peso].filter(x => x && x !== "---").join(" • ");
+        // Portada arriba sin ningún texto ni código superpuesto
+        const bloquePortada = document.createElement("div");
+        bloquePortada.className = "poster-card relative rounded-xl overflow-hidden bg-slate-950 aspect-[2/3] border border-slate-800 shadow-md";
+        bloquePortada.innerHTML = generarHtmlImagenPortada(peli);
 
-        tarjeta.innerHTML = `
-            <!-- CABECERA DE TARJETA -->
-            <div class="flex justify-between items-center px-1">
-                <span class="text-[10px] font-black uppercase dinamico-texto-acento tracking-wider bg-slate-950 border border-slate-800 px-2 py-0.5 rounded-md">#${peli.codigoFormateado}</span>
-                <span class="text-slate-400 font-bold text-[11px] tracking-tight">${metaSuperior}</span>
-            </div>
+        // Ficha técnica debajo de la portada
+        const bloqueFicha = crearBloqueFichaInteractiva(peli);
 
-            <!-- PORTADA SOLO INFORMATIVA -->
-            <div class="poster-card relative rounded-xl overflow-hidden bg-slate-950 aspect-[2/3] border border-slate-800 shadow-md">
-                ${generarHtmlImagenPortada(peli.codigoFormateado, peli.titulo)}
-            </div>
-
-            <!-- FICHA TÉCNICA DETALLADA -->
-            <div class="bg-slate-950/80 rounded-xl p-3 border border-slate-800/80 flex flex-col gap-2 flex-grow">
-                <div>
-                    <h2 class="text-sm font-black uppercase tracking-wide text-white leading-snug">${peli.titulo}</h2>
-                    <div class="flex items-center flex-wrap gap-2 text-[11px] text-slate-400 font-semibold mt-0.5">
-                        ${peli.ano ? `<span class="dinamico-texto-acento">Año: ${peli.ano}</span>` : ""}
-                        ${peli.ano && peli.pais ? `<span>•</span>` : ""}
-                        ${peli.pais ? `<span>País: ${peli.pais}</span>` : ""}
-                    </div>
-                </div>
-
-                <div class="h-px bg-slate-800/80 my-0.5"></div>
-
-                <!-- AUDIO -->
-                <div class="flex flex-col gap-1 text-[11px]">
-                    <span class="font-bold dinamico-texto-acento uppercase text-[10px] tracking-wider">Audio:</span>
-                    <div class="flex flex-wrap gap-1">
-                        ${generarHtmlPildorasAudio(peli.audio)}
-                    </div>
-                </div>
-
-                <!-- VIDEO / FORMATO -->
-                ${peli.formato ? `
-                <div class="flex flex-col gap-1 text-[11px]">
-                    <span class="font-bold dinamico-texto-acento uppercase text-[10px] tracking-wider">Video:</span>
-                    <div>
-                        <span class="bg-slate-900 border border-slate-700/70 text-slate-200 px-2 py-0.5 rounded font-medium">${peli.formato}</span>
-                    </div>
-                </div>
-                ` : ""}
-
-                <!-- SUBTÍTULOS -->
-                ${peli.subtitulos ? `
-                <div class="flex flex-col gap-1 text-[11px]">
-                    <span class="font-bold dinamico-texto-acento uppercase text-[10px] tracking-wider">Subtítulos:</span>
-                    <span class="text-slate-300 font-medium">${peli.subtitulos}</span>
-                </div>
-                ` : ""}
-            </div>
-        `;
-
+        tarjeta.appendChild(bloquePortada);
+        tarjeta.appendChild(bloqueFicha);
         grid.appendChild(tarjeta);
     });
 
@@ -626,9 +735,8 @@ function renderizarVistaCompacta() {
 
     const textoBtn = CONFIG_VARS.TEXTO_BTN_DETALLES_COMPACTO || "Mostrar detalles";
 
-    // Cuadrícula de 4 columnas en móvil y 4 columnas en escritorio (4 x 10 = 40 ítems)
     const grid = document.createElement("div");
-    grid.className = "grid grid-cols-4 gap-2 sm:gap-3.5";
+    grid.className = "grid grid-cols-4 gap-2 sm:gap-3.5 items-start";
 
     itemsPagina.forEach(peli => {
         const item = document.createElement("div");
@@ -636,10 +744,7 @@ function renderizarVistaCompacta() {
 
         item.innerHTML = `
             <div class="relative rounded-lg overflow-hidden bg-slate-950 aspect-[2/3] border border-slate-800/80">
-                ${generarHtmlImagenPortada(peli.codigoFormateado, peli.titulo, "w-full h-full object-cover group-hover:scale-105 transition-transform duration-300")}
-                <span class="absolute top-1 left-1 text-[8px] sm:text-[10px] font-black dinamico-texto-acento bg-slate-950/85 px-1.5 py-0.5 rounded border border-slate-800">
-                    #${peli.codigoFormateado}
-                </span>
+                ${generarHtmlImagenPortada(peli, "w-full h-full object-cover group-hover:scale-105 transition-transform duration-300")}
             </div>
             <button type="button" class="w-full py-1.5 px-1 rounded-lg bg-slate-800 group-hover:bg-slate-700 text-slate-200 font-bold text-[9px] sm:text-xs leading-tight text-center border border-slate-700/70 transition-colors">
                 ${textoBtn}
@@ -657,63 +762,27 @@ function renderizarVistaCompacta() {
 }
 
 // ==========================================
-// 7. MODAL DETALLADO (PARA VISTA COMPACTA)
+// 8. MODAL DETALLADO (PARA VISTA COMPACTA)
 // ==========================================
 function abrirModalDetalles(peli) {
-    const metaSuperior = [peli.duracion, peli.peso].filter(x => x && x !== "---").join(" • ");
+    modalDetallesContenido.innerHTML = "";
 
-    modalDetallesContenido.innerHTML = `
-        <!-- COLUMNA IZQUIERDA: PORTADA EN GRANDE -->
-        <div class="w-full md:w-5/12 shrink-0">
-            <div class="rounded-xl overflow-hidden bg-slate-950 aspect-[2/3] border border-slate-800 shadow-lg max-w-[260px] md:max-w-none mx-auto">
-                ${generarHtmlImagenPortada(peli.codigoFormateado, peli.titulo, "w-full h-full object-cover")}
-            </div>
-        </div>
-
-        <!-- COLUMNA DERECHA: FICHA TÉCNICA COMPLETA -->
-        <div class="w-full md:w-7/12 flex flex-col justify-between gap-3">
-            <div class="flex flex-col gap-2.5">
-                <div class="flex items-center gap-2 pr-8">
-                    <span class="text-[10px] font-black uppercase dinamico-texto-acento tracking-wider bg-slate-950 border border-slate-800 px-2 py-0.5 rounded-md">#${peli.codigoFormateado}</span>
-                    ${metaSuperior ? `<span class="text-slate-400 font-bold text-xs">${metaSuperior}</span>` : ""}
-                </div>
-
-                <div>
-                    <h2 class="text-base sm:text-lg font-black uppercase tracking-wide text-white leading-snug">${peli.titulo}</h2>
-                    <div class="flex items-center flex-wrap gap-2 text-xs text-slate-400 font-semibold mt-1">
-                        ${peli.ano ? `<span class="dinamico-texto-acento">Año: ${peli.ano}</span>` : ""}
-                        ${peli.ano && peli.pais ? `<span>•</span>` : ""}
-                        ${peli.pais ? `<span>País: ${peli.pais}</span>` : ""}
-                    </div>
-                </div>
-
-                <div class="h-px bg-slate-800 my-0.5"></div>
-
-                <div class="flex flex-col gap-1 text-xs">
-                    <span class="font-bold dinamico-texto-acento uppercase text-[10px] tracking-wider">Audio:</span>
-                    <div class="flex flex-wrap gap-1.5">
-                        ${generarHtmlPildorasAudio(peli.audio)}
-                    </div>
-                </div>
-
-                ${peli.formato ? `
-                <div class="flex flex-col gap-1 text-xs">
-                    <span class="font-bold dinamico-texto-acento uppercase text-[10px] tracking-wider">Video:</span>
-                    <div>
-                        <span class="bg-slate-900 border border-slate-700/70 text-slate-200 px-2.5 py-1 rounded font-medium inline-block">${peli.formato}</span>
-                    </div>
-                </div>
-                ` : ""}
-
-                ${peli.subtitulos ? `
-                <div class="flex flex-col gap-1 text-xs">
-                    <span class="font-bold dinamico-texto-acento uppercase text-[10px] tracking-wider">Subtítulos:</span>
-                    <span class="text-slate-300 font-medium leading-relaxed">${peli.subtitulos}</span>
-                </div>
-                ` : ""}
-            </div>
+    // Columna izquierda: Portada en grande
+    const colPortada = document.createElement("div");
+    colPortada.className = "w-full md:w-5/12 shrink-0";
+    colPortada.innerHTML = `
+        <div class="rounded-xl overflow-hidden bg-slate-950 aspect-[2/3] border border-slate-800 shadow-lg max-w-[260px] md:max-w-none mx-auto">
+            ${generarHtmlImagenPortada(peli, "w-full h-full object-cover")}
         </div>
     `;
+
+    // Columna derecha: Ficha técnica interactiva (Versión Pesada / Versión Ligera)
+    const colDatos = document.createElement("div");
+    colDatos.className = "w-full md:w-7/12 flex flex-col pt-1 md:pt-7";
+    colDatos.appendChild(crearBloqueFichaInteractiva(peli));
+
+    modalDetallesContenido.appendChild(colPortada);
+    modalDetallesContenido.appendChild(colDatos);
 
     actualizarEstadoActualSinNavegar();
     document.body.classList.add("modal-abierto");
@@ -731,7 +800,7 @@ function cerrarModalDetalles() {
 }
 
 // ==========================================
-// 8. PAGINACIÓN
+// 9. PAGINACIÓN
 // ==========================================
 function cambiarPagina(nuevaPagina) {
     actualizarEstadoActualSinNavegar();
