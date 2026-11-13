@@ -21,7 +21,7 @@ const CONFIG_OPCIONES = {
     TEXTO_BOTON_MODO_2: "Vista Compacta",
     TEXTO_BTN_DETALLES_COMPACTO: "Mostrar detalles",
     PLACEHOLDER_BUSCADOR: "Buscar película por nombre...",
-    NUMERO_WHATSAPP: "51983104072",
+    NUMERO_WHATSAPP: "51983072104",
     TEXTO_WHATSAPP_FOOTER: "WhatsApp Soporte",
 
     // ==========================================
