@@ -100,7 +100,7 @@ function normalizarClave(texto) {
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/ñ/g, "n")
-        .replace(/\s+/g, "");
+        .replace(/[^a-z0-9]/g, "");
 }
 
 function quitarAcentos(texto) {
@@ -109,15 +109,24 @@ function quitarAcentos(texto) {
 }
 
 function parsearCSV(textoCsv) {
+    // Detectar si por error se pegó un enlace HTML en vez de output=csv
+    if (textoCsv.trim().startsWith("<!DOCTYPE") || textoCsv.trim().startsWith("<html")) {
+        console.error("El enlace devolvió HTML en lugar de CSV. Verifica que termine en output=csv.");
+        return [];
+    }
+
     const lineas = textoCsv.split(/\r?\n/);
     if (lineas.length < 3) return [];
 
     // Fila 1 (índice 0): Encabezados
     const encabezados = dividirLineaCSV(lineas[0]).map(h => normalizarClave(h));
+    console.log("Fila 1 (Encabezados):", encabezados);
+    console.log("Fila 2 (Buscador omitido):", lineas[1]);
+
     const resultado = [];
 
-    // Fila 2 (índice 1) se omite (buscador interno de Google Sheets).
-    // Los datos reales empiezan en la Fila 3 (índice 2).
+    // Fila 2 (índice 1) es el buscador -> se omite siempre.
+    // Los datos reales comienzan estrictamente en la Fila 3 (índice 2).
     for (let i = 2; i < lineas.length; i++) {
         if (!lineas[i].trim()) continue;
 
@@ -125,6 +134,7 @@ function parsearCSV(textoCsv) {
         const filaObjeto = {};
 
         encabezados.forEach((encabezado, indice) => {
+            if (!encabezado) return;
             const val = valores[indice] !== undefined ? valores[indice].trim() : "";
             filaObjeto[encabezado] = val.replace(/^"|"$/g, "");
         });
@@ -168,7 +178,6 @@ function obtenerValorColumna(fila, claveConfig) {
 
 function formatearDuracion(duracionRaw) {
     if (!duracionRaw) return "";
-    // Si viene como "01:49:00" desde Google Sheets, lo convierte a "1:49"
     const matchHms = duracionRaw.match(/^0?(\d+):(\d{2}):\d{2}$/);
     if (matchHms) {
         return `${matchHms[1]}:${matchHms[2]}`;
@@ -178,7 +187,6 @@ function formatearDuracion(duracionRaw) {
 
 function formatearAno(anoRaw) {
     if (!anoRaw) return "";
-    // Evita decimales si viene como "2026.0"
     return anoRaw.replace(/\.0+$/, "");
 }
 
@@ -205,14 +213,12 @@ function construirCatalogoCircular(filasCrudas) {
             const esUmbral = condicionNorm === txtUmbral && txtUmbral !== "";
             const esHabilitado = esUmbral || (condicionNorm === txtHabilitado && txtHabilitado !== "");
 
-            // Recopilar pistas de audio (AUDIO 1, AUDIO 2, AUDIO 3)
             const audios = [
                 obtenerValorColumna(fila, "AUDIO_1"),
                 obtenerValorColumna(fila, "AUDIO_2"),
                 obtenerValorColumna(fila, "AUDIO_3")
             ].filter(Boolean);
 
-            // Recopilar subtítulos (SUB 1 a SUB 5)
             const subtitulos = [
                 obtenerValorColumna(fila, "SUB_1"),
                 obtenerValorColumna(fila, "SUB_2"),
@@ -252,12 +258,11 @@ function construirCatalogoCircular(filasCrudas) {
         }
     });
 
-    // Punto de inicio: la fila con "UMBRAL" (o en su defecto el mayor habilitado si aún no marcaron umbral)
+    console.log("Filas desde fila 3:", filasCrudas.length, "| Umbral detectado:", numeroUmbral, "| Mayor habilitado:", mayorNumeroHabilitado);
+
     const pivoteInicio = numeroUmbral !== null ? numeroUmbral : mayorNumeroHabilitado;
     if (pivoteInicio === null) return [];
 
-    // Recorrido circular completo hacia atrás desde pivoteInicio (ej. 194 -> 193 -> ... -> 26 -> 560 -> 559...)
-    // Solo incluye los ítems cuya CONDICIÓN sea "HABILITADO" o "UMBRAL".
     const listaOrdenada = [];
     for (let step = 0; step < maxCatalogo; step++) {
         const numActual = ((pivoteInicio - 1 - step) % maxCatalogo + maxCatalogo) % maxCatalogo + 1;
@@ -269,7 +274,6 @@ function construirCatalogoCircular(filasCrudas) {
     }
 
     return listaOrdenada;
-}
 
 // ==========================================
 // 4. HISTORIAL SPA Y GESTIÓN DE ESTADO
