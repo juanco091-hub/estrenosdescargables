@@ -2,7 +2,7 @@ const CONFIG_OPCIONES = {
     // ==========================================
     // 1. FUENTE DE DATOS (GOOGLE SHEETS CSV)
     // ==========================================
-    URL_CSV_PELICULAS: "PEGA_AQUI_TU_ENLACE_CSV_DE_GOOGLE_SHEETS",
+    URL_CSV_PELICULAS: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRu9RP5qIWHyJ_wWh_kF9XrbO5-MTP48fxCDEy41WsrIJIadejXV8nRXp7MEOwAy1sM8KflVnQwiX1j/pubhtml?gid=0&single=true",
 
     // ==========================================
     // 2. CONFIGURACIÓN DEL CATÁLOGO CIRCULAR Y CONDICIÓN
