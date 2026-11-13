@@ -109,7 +109,6 @@ function quitarAcentos(texto) {
 }
 
 function parsearCSV(textoCsv) {
-    // Detectar si por error se pegó un enlace HTML en vez de output=csv
     if (textoCsv.trim().startsWith("<!DOCTYPE") || textoCsv.trim().startsWith("<html")) {
         console.error("El enlace devolvió HTML en lugar de CSV. Verifica que termine en output=csv.");
         return [];
@@ -274,6 +273,7 @@ function construirCatalogoCircular(filasCrudas) {
     }
 
     return listaOrdenada;
+}
 
 // ==========================================
 // 4. HISTORIAL SPA Y GESTIÓN DE ESTADO
@@ -377,7 +377,6 @@ async function inicializarApp() {
 }
 
 function configurarEventos() {
-    // Cambiar a Modo 1 (Vista Normal)
     btnModo1.addEventListener("click", () => {
         if (modoVistaActual === "modo1") return;
         actualizarEstadoActualSinNavegar();
@@ -389,7 +388,6 @@ function configurarEventos() {
         window.scrollTo(0, 0);
     });
 
-    // Cambiar a Modo 2 (Vista Compacta)
     btnModo2.addEventListener("click", () => {
         if (modoVistaActual === "modo2") return;
         actualizarEstadoActualSinNavegar();
@@ -401,12 +399,10 @@ function configurarEventos() {
         window.scrollTo(0, 0);
     });
 
-    // Clic en el título principal -> volver al inicio limpio
     mainTitle.addEventListener("click", () => {
         resetearAInicio();
     });
 
-    // Mostrar/ocultar buscador
     btnToggleSearch.addEventListener("click", () => {
         searchBarContainer.classList.toggle("hidden");
         if (!searchBarContainer.classList.contains("hidden")) {
@@ -416,7 +412,6 @@ function configurarEventos() {
         actualizarEstadoActualSinNavegar();
     });
 
-    // Búsqueda en tiempo real por nombre de película
     inputBuscar.addEventListener("input", () => {
         paginaActual = 1;
         if (inputBuscar.value.trim() !== "") {
@@ -437,13 +432,11 @@ function configurarEventos() {
         actualizarEstadoActualSinNavegar();
     });
 
-    // Cerrar modal de detalles
     btnCerrarModalDetalles.addEventListener("click", cerrarModalDetalles);
     modalDetalles.addEventListener("click", (e) => {
         if (e.target === modalDetalles) cerrarModalDetalles();
     });
 
-    // Navegación táctil (Swipe horizontal para cambiar de página en móvil)
     let touchStartX = 0;
     let touchStartY = 0;
 
@@ -501,8 +494,6 @@ function actualizarUIBotonesModo() {
 // 6. GENERACIÓN DE PORTADA Y BLOQUE DE FICHA TÉCNICA
 // ==========================================
 function generarHtmlImagenPortada(peli, clasesExtra = "w-full h-full object-cover transition-transform duration-300") {
-    // Si tiene portada en carpeta portadas/ (.jpg, .webp, .png, .jpeg), no muestra el código.
-    // Solo si no existe ninguna imagen, muestra la portada genérica con el código del ítem.
     return `
         <img src="portadas/${peli.codigoFormateado}.jpg" 
              alt="${peli.titulo.replace(/"/g, "&quot;")}"
@@ -518,12 +509,10 @@ function construirContenidoVersion(peli, tipoVersion) {
 
     const esLigera = tipoVersion === "ligera";
 
-    // Audios según versión
     const listaAudios = esLigera
         ? [cfgLigera.AUDIO || "Español Latino AAC 2.0"]
         : (peli.audios.length > 0 ? peli.audios : ["No especificado"]);
 
-    // Video: Formato + Resolución + Fuente
     const formatoBase = esLigera
         ? (cfgLigera.FORMATO_VIDEO || "MP4")
         : peli.formato;
@@ -534,12 +523,10 @@ function construirContenidoVersion(peli, tipoVersion) {
 
     const textoFormatoCompleto = [formatoBase, resolucionBase, peli.fuente].filter(Boolean).join(" ");
 
-    // Tamaño según versión
     const textoTamano = esLigera
         ? (peli.tamanoConv || "No especificado")
         : (peli.tamano || "No especificado");
 
-    // Subtítulos (solo en Versión Pesada)
     const tieneSubtitulos = !esLigera && peli.subtitulos.length > 0;
     const textoSubtitulos = peli.subtitulos.join(", ");
 
@@ -616,7 +603,6 @@ function crearBloqueFichaInteractiva(peli) {
     contenedorFicha.className = "bg-slate-950/85 rounded-xl p-3 border border-slate-800/80 flex flex-col gap-3";
 
     contenedorFicha.innerHTML = `
-        <!-- PAR DE BOTONES: VERSIÓN PESADA (IZQUIERDA) / VERSIÓN LIGERA (DERECHA) -->
         <div class="grid grid-cols-2 gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800">
             <button type="button" data-version="pesada" class="btn-version py-1.5 px-2 rounded-lg text-[11px] font-black transition-all active:scale-95 dinamico-modo-activo text-center">
                 ${txtBtnPesada}
@@ -626,7 +612,6 @@ function crearBloqueFichaInteractiva(peli) {
             </button>
         </div>
 
-        <!-- CONTENIDO DINÁMICO DE DATOS (SE ADAPTA VERTICALMENTE) -->
         <div class="contenedor-datos-version flex flex-col gap-2.5">
             ${construirContenidoVersion(peli, "pesada")}
         </div>
@@ -679,7 +664,6 @@ function aplicarFiltrosYRenderizar() {
     renderizarPaginacion(datosFiltrados.length);
 }
 
-// MODO 1: VISTA NORMAL (20 ítems por página, sin datos arriba de la portada, ficha adaptable abajo)
 function renderizarVistaNormal() {
     contenedorPrincipal.innerHTML = "";
 
@@ -696,7 +680,6 @@ function renderizarVistaNormal() {
     const inicio = (paginaActual - 1) * limite;
     const itemsPagina = datosFiltrados.slice(inicio, inicio + limite);
 
-    // items-start permite que cada tarjeta ajuste su altura vertical según la cantidad de audios y subtítulos
     const grid = document.createElement("div");
     grid.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start";
 
@@ -704,12 +687,10 @@ function renderizarVistaNormal() {
         const tarjeta = document.createElement("article");
         tarjeta.className = "dinamico-tarjeta border rounded-2xl overflow-hidden shadow-xl p-3 flex flex-col gap-3";
 
-        // Portada arriba sin ningún texto ni código superpuesto
         const bloquePortada = document.createElement("div");
         bloquePortada.className = "poster-card relative rounded-xl overflow-hidden bg-slate-950 aspect-[2/3] border border-slate-800 shadow-md";
         bloquePortada.innerHTML = generarHtmlImagenPortada(peli);
 
-        // Ficha técnica debajo de la portada
         const bloqueFicha = crearBloqueFichaInteractiva(peli);
 
         tarjeta.appendChild(bloquePortada);
@@ -720,7 +701,6 @@ function renderizarVistaNormal() {
     contenedorPrincipal.appendChild(grid);
 }
 
-// MODO 2: VISTA COMPACTA (40 ítems por página en cuadrícula 4x10)
 function renderizarVistaCompacta() {
     contenedorPrincipal.innerHTML = "";
 
@@ -771,7 +751,6 @@ function renderizarVistaCompacta() {
 function abrirModalDetalles(peli) {
     modalDetallesContenido.innerHTML = "";
 
-    // Columna izquierda: Portada en grande
     const colPortada = document.createElement("div");
     colPortada.className = "w-full md:w-5/12 shrink-0";
     colPortada.innerHTML = `
@@ -780,7 +759,6 @@ function abrirModalDetalles(peli) {
         </div>
     `;
 
-    // Columna derecha: Ficha técnica interactiva (Versión Pesada / Versión Ligera)
     const colDatos = document.createElement("div");
     colDatos.className = "w-full md:w-7/12 flex flex-col pt-1 md:pt-7";
     colDatos.appendChild(crearBloqueFichaInteractiva(peli));
