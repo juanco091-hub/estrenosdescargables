@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Estrenos Descargables</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior-y: none !important;
+            touch-action: pan-x pan-y;
+            background-color: var(--config-fondo-body, #020617);
+        }
+        body.modal-abierto {
+            overflow: hidden;
+        }
+        .scrollbar-none::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-none {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .scrollbar-personalizado::-webkit-scrollbar {
+            width: 6px !important;
+            height: 6px !important;
+            display: block !important;
+        }
+        .scrollbar-personalizado::-webkit-scrollbar-track {
+            background: #0f172a !important;
+            border-radius: 10px !important;
+        }
+        .scrollbar-personalizado::-webkit-scrollbar-thumb {
+            background-color: #334155 !important;
+            border-radius: 10px !important;
+        }
+        .scrollbar-personalizado::-webkit-scrollbar-thumb:hover {
+            background-color: var(--config-primario, #10b981) !important;
+        }
+        .dinamico-header-footer {
+            background-color: var(--config-fondo-hf, #0f172a) !important;
+        }
+        .dinamico-tarjeta {
+            background-color: var(--config-fondo-tarjeta, #0f172a) !important;
+            border-color: var(--config-borde-tarjeta, #1e293b) !important;
+        }
+        .dinamico-modo-activo {
+            background-color: var(--config-primario, #10b981) !important;
+            color: var(--config-texto-sobre-primario, #022c22) !important;
+            box-shadow: 0 4px 12px var(--config-primario-alpha, rgba(16, 185, 129, 0.35)) !important;
+        }
+        .dinamico-texto-acento {
+            color: var(--config-texto-acento, #34d399) !important;
+        }
+        .dinamico-badge-primario {
+            background-color: var(--config-primario, #10b981) !important;
+            color: var(--config-texto-sobre-primario, #022c22) !important;
+        }
+        .dinamico-borde-buscador {
+            border-color: var(--config-borde-buscador-alpha, rgba(16, 185, 129, 0.5)) !important;
+        }
+        .dinamico-borde-buscador:focus {
+            border-color: var(--config-primario, #10b981) !important;
+        }
+        .dinamico-spinner {
+            border-color: var(--config-spinner, #10b981) !important;
+            border-top-color: transparent !important;
+        }
+        .dinamico-error {
+            color: var(--config-error, #ef4444) !important;
+        }
+        .poster-card:hover img {
+            transform: scale(1.03);
+        }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col font-sans select-none pb-20">
+
+    <!-- HEADER DE NAVEGACIÓN -->
+    <header class="dinamico-header-footer border-b border-slate-800 sticky top-0 z-50 shadow-2xl">
+        <div class="max-w-md md:max-w-6xl mx-auto px-4 py-3 flex flex-col gap-3">
+            
+            <!-- FILA SUPERIOR: TÍTULO + ACCIONES RÁPIDAS -->
+            <div class="flex items-center justify-between gap-2">
+                <h1 id="main-title" class="text-lg sm:text-xl font-black tracking-wider uppercase cursor-pointer flex items-center flex-wrap gap-1.5 active:scale-95 transition-transform">
+                    <span id="titulo-parte-1" class="dinamico-texto-acento">ESTRENOS</span>
+                    <span id="titulo-parte-2" class="dinamico-badge-primario text-[11px] sm:text-xs px-2 py-0.5 rounded font-black tracking-widest">DESCARGABLES</span>
+                </h1>
+
+                <div class="flex gap-2 items-center shrink-0">
+                    <!-- BOTÓN LUPA / BUSCADOR -->
+                    <button id="btn-toggle-search" title="Buscar película" class="w-9 h-9 bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-700 text-slate-300 flex items-center justify-center transition-all active:scale-95">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </button>
+
+                    <!-- BOTÓN WHATSAPP DIRECTO -->
+                    <a id="btn-header-whatsapp" href="https://wa.me/51983104072" target="_blank" title="Contactar por WhatsApp" class="w-9 h-9 bg-emerald-500/15 hover:bg-emerald-500/25 rounded-xl border border-emerald-500/40 text-emerald-400 flex items-center justify-center transition-all active:scale-95">
+                        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+
+            <!-- SELECTOR DE MODOS DE VISTA (BOTÓN MODO 1 Y BOTÓN MODO 2) -->
+            <div class="grid grid-cols-2 sm:flex sm:w-fit bg-slate-950 p-1 rounded-xl border border-slate-800 gap-1">
+                <button id="btn-modo-1" class="px-4 py-1.5 rounded-lg text-xs font-black transition-all active:scale-95 dinamico-modo-activo flex items-center justify-center gap-1.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                    <span id="texto-btn-modo-1">Vista Normal</span>
+                </button>
+                <button id="btn-modo-2" class="px-4 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition-all active:scale-95 flex items-center justify-center gap-1.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path>
+                    </svg>
+                    <span id="texto-btn-modo-2">Vista Compacta</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- CONTENEDOR PRINCIPAL RESPONSIVO (MÓVIL Y PC) -->
+    <main class="flex-grow max-w-md md:max-w-6xl w-full mx-auto px-3 sm:px-4 pt-3 pb-12">
+        
+        <!-- BARRA DE BÚSQUEDA -->
+        <div id="search-bar-container" class="hidden mb-4 max-w-xl mx-auto transition-all duration-300">
+            <div class="relative flex items-center">
+                <input type="text" id="input-buscar" placeholder="Buscar película por nombre..." 
+                       class="w-full bg-slate-900 text-slate-100 placeholder-slate-500 text-xs sm:text-sm font-medium rounded-xl pl-9 pr-9 py-2.5 border dinamico-borde-buscador focus:outline-none shadow-lg">
+                <div class="absolute left-3 dinamico-texto-acento pointer-events-none">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+                <button id="btn-limpiar-busqueda" class="hidden absolute right-3 text-slate-400 hover:text-white text-xs font-bold">✕</button>
+            </div>
+        </div>
+
+        <!-- CONTENEDOR DINÁMICO DE PELÍCULAS -->
+        <div id="contenedor-principal"></div>
+
+        <!-- PAGINACIÓN -->
+        <div id="contenedor-paginacion" class="flex flex-wrap justify-center items-center gap-1.5 mt-8 py-2"></div>
+    </main>
+
+    <!-- MODAL DE DETALLES PARA VISTA COMPACTA -->
+    <div id="modal-detalles" class="fixed inset-0 z-[100] bg-black/85 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4">
+        <div class="dinamico-tarjeta border rounded-2xl max-w-sm md:max-w-2xl w-full max-h-[88vh] shadow-2xl flex flex-col relative overflow-hidden">
+            
+            <!-- BOTÓN CERRAR -->
+            <button id="btn-cerrar-modal-detalles" class="absolute top-3 right-3 z-20 text-slate-300 hover:text-white font-bold text-sm bg-slate-950/90 border border-slate-700 rounded-full w-8 h-8 flex items-center justify-center shadow-lg active:scale-90 transition-transform">
+                ✕
+            </button>
+
+            <!-- CONTENIDO SCROLLABLE -->
+            <div id="modal-detalles-contenido" class="overflow-y-auto scrollbar-personalizado p-4 flex flex-col md:flex-row gap-4">
+                <!-- Se llena dinámicamente desde app.js -->
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER FIJO CON CONTACTO WHATSAPP -->
+    <footer class="dinamico-header-footer/95 border-t border-slate-800 fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md">
+        <div class="max-w-md md:max-w-6xl mx-auto h-14 flex items-center justify-center px-4">
+            <a id="btn-footer-whatsapp" href="https://wa.me/51983104072" target="_blank" class="flex items-center justify-center dinamico-texto-acento font-bold text-xs sm:text-sm gap-2 active:scale-95 transition-transform py-2 px-5 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-emerald-500/40">
+                <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                </svg>
+                <span id="texto-footer-whatsapp">WhatsApp Soporte</span>
+            </a>
+        </div>
+    </footer>
+
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
