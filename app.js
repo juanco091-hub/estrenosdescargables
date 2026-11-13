@@ -52,7 +52,6 @@ function aplicarConfiguracion() {
     setVar("--config-spinner", "COLOR_SPINNER_CARGA", "#10b981");
     setVar("--config-error", "COLOR_TEXTO_ERROR", "#ef4444");
 
-    // Textos configurables
     const elTitulo1 = document.getElementById("titulo-parte-1");
     const elTitulo2 = document.getElementById("titulo-parte-2");
     if (elTitulo1 && CONFIG_VARS.TITULO_PRINCIPAL_1) elTitulo1.textContent = CONFIG_VARS.TITULO_PRINCIPAL_1;
@@ -67,7 +66,6 @@ function aplicarConfiguracion() {
         inputBuscar.placeholder = CONFIG_VARS.PLACEHOLDER_BUSCADOR;
     }
 
-    // WhatsApp dinámico
     const numeroWa = CONFIG_VARS.NUMERO_WHATSAPP || "51983104072";
     const urlWa = `https://wa.me/${numeroWa}`;
     const btnHeaderWa = document.getElementById("btn-header-whatsapp");
@@ -120,7 +118,6 @@ function parsearCSV(textoCsv) {
     // Fila 1 (índice 0): Encabezados
     const encabezados = dividirLineaCSV(lineas[0]).map(h => normalizarClave(h));
     console.log("Fila 1 (Encabezados):", encabezados);
-    console.log("Fila 2 (Buscador omitido):", lineas[1]);
 
     const resultado = [];
 
@@ -257,7 +254,7 @@ function construirCatalogoCircular(filasCrudas) {
         }
     });
 
-    console.log("Filas desde fila 3:", filasCrudas.length, "| Umbral detectado:", numeroUmbral, "| Mayor habilitado:", mayorNumeroHabilitado);
+    console.log("Filas desde fila 3:", filasCrudas.length, "| Umbral:", numeroUmbral, "| Mayor habilitado:", mayorNumeroHabilitado);
 
     const pivoteInicio = numeroUmbral !== null ? numeroUmbral : mayorNumeroHabilitado;
     if (pivoteInicio === null) return [];
@@ -531,7 +528,6 @@ function construirContenidoVersion(peli, tipoVersion) {
     const textoSubtitulos = peli.subtitulos.join(", ");
 
     return `
-        <!-- DATOS GENERALES -->
         <div class="flex flex-col gap-1 text-xs">
             ${peli.ano ? `
             <div class="flex items-baseline gap-1.5">
@@ -554,7 +550,6 @@ function construirContenidoVersion(peli, tipoVersion) {
 
         <div class="h-px bg-slate-800/80"></div>
 
-        <!-- SECCIÓN AUDIO -->
         <div class="flex flex-col gap-1.5 text-xs">
             <span class="font-black dinamico-texto-acento uppercase text-[11px] tracking-wider">${etq.SECCION_AUDIO || "AUDIO"}</span>
             <div class="flex flex-col gap-1">
@@ -568,7 +563,6 @@ function construirContenidoVersion(peli, tipoVersion) {
 
         <div class="h-px bg-slate-800/80"></div>
 
-        <!-- SECCIÓN VIDEO -->
         <div class="flex flex-col gap-1 text-xs">
             <span class="font-black dinamico-texto-acento uppercase text-[11px] tracking-wider">${etq.SECCION_VIDEO || "VIDEO"}</span>
             <div class="flex flex-col gap-1 text-[11px] mt-0.5">
@@ -584,7 +578,6 @@ function construirContenidoVersion(peli, tipoVersion) {
             </div>
         </div>
 
-        <!-- SECCIÓN SUBTÍTULOS (SOLO EN VERSIÓN PESADA) -->
         ${tieneSubtitulos ? `
         <div class="h-px bg-slate-800/80"></div>
         <div class="flex flex-col gap-1 text-xs">
